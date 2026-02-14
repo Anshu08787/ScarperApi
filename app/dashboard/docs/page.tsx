@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ANIMESALT_ENDPOINTS } from "../../../components/docs-components/animesalt-docs"
 import { ANIMEPAHE_ENDPOINTS } from "../../../components/docs-components/animepahe-docs"
+import { CASTEL_ENDPOINTS } from "../../../components/docs-components/castel-docs"
 import { KMMOVIES_ENDPOINTS } from "../../../components/docs-components/kmmovies-docs"
 import { NETMIRROR_ENDPOINTS } from "../../../components/docs-components/netmirror-docs"
 import { XM_ENDPOINTS } from "../../../components/docs-components/xm-docs"
@@ -1818,6 +1819,7 @@ console.log(episodeData);`,
   },
   ...ANIMESALT_ENDPOINTS,
   ...ANIMEPAHE_ENDPOINTS,
+  ...CASTEL_ENDPOINTS,
   ...KMMOVIES_ENDPOINTS,
   ...NETMIRROR_ENDPOINTS,
   ...XM_ENDPOINTS,

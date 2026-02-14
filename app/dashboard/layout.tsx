@@ -38,6 +38,7 @@ import {
   DatabaseIcon,
   LogOutIcon,
   UserIcon,
+  ImageIcon,
 } from "lucide-react";
 
 const menuItems = [
@@ -60,6 +61,11 @@ const menuItems = [
     title: "Documentation",
     icon: FileTextIcon,
     href: "/dashboard/docs",
+  },
+  {
+    title: "Gallery",
+    icon: ImageIcon,
+    href: "/gallery",
   },
   {
     title: "Settings",

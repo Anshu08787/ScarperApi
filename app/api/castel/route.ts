@@ -1,8 +1,119 @@
 import { NextRequest, NextResponse } from 'next/server';
+// TypeScript Interfaces
+interface CastleDecryptionResponse {
+  decrypted?: string;
+  error?: string;
+}
 
-// Castle Scraper for Nuvio Local Scrapers
-// React Native compatible version - Promise-based approach only
-// Extracts streaming links using TMDB ID for Castle API with AES-CBC decryption
+interface SecurityKeyResponse {
+  code: number;
+  data?: string;
+  message?: string;
+}
+
+interface SearchMovieItem {
+  id?: string;
+  redirectId?: string;
+  redirectIdStr?: string;
+  name?: string;
+  title?: string;
+  year?: number;
+  poster?: string;
+  [key: string]: unknown;
+}
+
+interface SearchResponse {
+  rows?: SearchMovieItem[];
+  total?: number;
+  [key: string]: unknown;
+}
+
+interface EpisodeTrack {
+  id: number;
+  name: string;
+  languageId: number;
+  [key: string]: unknown;
+}
+
+interface Episode {
+  id: string;
+  name?: string;
+  episode?: number;
+  number?: number;
+  tracks?: EpisodeTrack[];
+  [key: string]: unknown;
+}
+
+interface Season {
+  id: string;
+  name?: string;
+  season?: number;
+  number?: number;
+  movieId?: string;
+  episodes?: Episode[];
+  [key: string]: unknown;
+}
+
+interface MovieDetails {
+  id?: string;
+  name?: string;
+  title?: string;
+  year?: number;
+  seasons?: Season[];
+  episodes?: Episode[];
+  [key: string]: unknown;
+}
+
+interface VideoItem {
+  url: string;
+  quality?: string;
+  size?: number;
+  resolution?: string;
+  resolutionDescription?: string;
+  [key: string]: unknown;
+}
+
+interface VideoResponse {
+  videoUrl?: string;
+  videos?: VideoItem[];
+  size?: number;
+  [key: string]: unknown;
+}
+
+interface TMDBDetails {
+  title: string;
+  year: number | null;
+  tmdbId: string;
+}
+
+interface TMDBResponse {
+  title?: string;
+  name?: string;
+  release_date?: string;
+  first_air_date?: string;
+  id: number;
+}
+
+interface StreamResult {
+  name: string;
+  title: string;
+  url: string;
+  quality: string;
+  size: string;
+  headers: Record<string, string>;
+  provider: string;
+}
+
+interface FetchOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  timeout?: number;
+}
+
+interface DataBlock {
+  [key: string]: unknown;
+}
 
 // TMDB API Configuration
 const TMDB_API_KEY = '439c478a771f35c05022f9feabcca01c';
@@ -55,10 +166,10 @@ function decryptCastle(encryptedB64: string, securityKeyB64: string): Promise<st
         }
         return response.json();
     })
-    .then(function(data: any) {
+    .then(function(data: CastleDecryptionResponse) {
         if (data.error) throw new Error(data.error);
         console.log('[Castle] Server decryption successful');
-        return data.decrypted;
+        return data.decrypted!;
     })
     .catch(function(error) {
         console.error(`[Castle] Server decryption failed: ${error.message}`);
@@ -67,7 +178,7 @@ function decryptCastle(encryptedB64: string, securityKeyB64: string): Promise<st
 }
 
 // Helper function to make HTTP requests
-function makeRequest(url: string, options: any = {}) {
+function makeRequest(url: string, options: FetchOptions = {}) {
     const defaultHeaders = { ...WORKING_HEADERS };
 
     return fetch(url, {
@@ -128,7 +239,7 @@ function extractCipherFromResponse(response: Response): Promise<string> {
             if (json && json.data && typeof json.data === 'string') {
                 return json.data.trim();
             }
-        } catch (e) {
+        } catch {
             // Not JSON, assume it's raw base64
         }
         
@@ -145,7 +256,7 @@ function getSecurityKey(): Promise<string> {
         .then(function(response) {
             return response.json();
         })
-        .then(function(data: any) {
+        .then(function(data: SecurityKeyResponse) {
             if (data.code !== 200 || !data.data) {
                 throw new Error(`Security key API error: ${JSON.stringify(data)}`);
             }
@@ -155,7 +266,7 @@ function getSecurityKey(): Promise<string> {
 }
 
 // Search for content by keyword
-function searchCastle(securityKey: string, keyword: string, page = 1, size = 30): Promise<any> {
+function searchCastle(securityKey: string, keyword: string, page = 1, size = 30): Promise<SearchResponse> {
     console.log(`[Castle] Searching for: ${keyword}`);
     
     const params = new URLSearchParams({
@@ -184,7 +295,7 @@ function searchCastle(securityKey: string, keyword: string, page = 1, size = 30)
 }
 
 // Get movie/TV details
-function getDetails(securityKey: string, movieId: string): Promise<any> {
+function getDetails(securityKey: string, movieId: string): Promise<MovieDetails> {
     console.log(`[Castle] Fetching details for movieId: ${movieId}`);
     
     const url = `${CASTLE_BASE}/film-api/v1.1/movie?channel=${CHANNEL}&clientType=${CLIENT}&lang=${LANG}&movieId=${movieId}&packageName=${PKG}`;
@@ -202,7 +313,7 @@ function getDetails(securityKey: string, movieId: string): Promise<any> {
 }
 
 // Get video URL using v2.0.1 getVideo2 (shared streams)
-function getVideo2(securityKey: string, movieId: string, episodeId: string, resolution = 2): Promise<any> {
+function getVideo2(securityKey: string, movieId: string, episodeId: string, resolution = 2): Promise<VideoResponse> {
     console.log(`[Castle] Fetching video (v2) for movieId: ${movieId}, episodeId: ${episodeId}, resolution: ${resolution}`);
     
     const url = `${CASTLE_BASE}/film-api/v2.0.1/movie/getVideo2?clientType=${CLIENT}&packageName=${PKG}&channel=${CHANNEL}&lang=${LANG}`;
@@ -239,7 +350,7 @@ function getVideo2(securityKey: string, movieId: string, episodeId: string, reso
 }
 
 // Get video URL using v1.9.1 getVideo (language-specific)
-function getVideoV1(securityKey: string, movieId: string, episodeId: string, languageId: number, resolution = 2): Promise<any> {
+function getVideoV1(securityKey: string, movieId: string, episodeId: string, languageId: number, resolution = 2): Promise<VideoResponse> {
     console.log(`[Castle] Fetching video (v1) for movieId: ${movieId}, episodeId: ${episodeId}, languageId: ${languageId}, resolution: ${resolution}`);
     
     const params = new URLSearchParams({
@@ -270,15 +381,15 @@ function getVideoV1(securityKey: string, movieId: string, episodeId: string, lan
 }
 
 // Extract data block from response
-function extractDataBlock(obj: any): any {
-    if (obj && obj.data && typeof obj.data === 'object') {
-        return obj.data;
+function extractDataBlock(obj: DataBlock | SearchResponse | VideoResponse | MovieDetails): DataBlock {
+    if (obj && typeof obj === 'object' && 'data' in obj && obj.data && typeof obj.data === 'object') {
+        return obj.data as DataBlock;
     }
-    return obj || {};
+    return obj as DataBlock || {};
 }
 
 // Get movie/TV show details from TMDB
-function getTMDBDetails(tmdbId: string, mediaType: string): Promise<any> {
+function getTMDBDetails(tmdbId: string, mediaType: string): Promise<TMDBDetails> {
     const endpoint = mediaType === 'tv' ? 'tv' : 'movie';
     const url = `${TMDB_BASE_URL}/${endpoint}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=external_ids`;
     
@@ -286,8 +397,8 @@ function getTMDBDetails(tmdbId: string, mediaType: string): Promise<any> {
         .then(function(response) {
             return response.json();
         })
-        .then(function(data: any) {
-            const title = mediaType === 'tv' ? data.name : data.title;
+        .then(function(data: TMDBResponse) {
+            const title = mediaType === 'tv' ? (data.name || '') : (data.title || '');
             const releaseDate = mediaType === 'tv' ? data.first_air_date : data.release_date;
             const year = releaseDate ? parseInt(releaseDate.split('-')[0]) : null;
             
@@ -300,13 +411,13 @@ function getTMDBDetails(tmdbId: string, mediaType: string): Promise<any> {
 }
 
 // Find Castle movie ID by searching
-function findCastleMovieId(securityKey: string, tmdbInfo: any): Promise<string> {
+function findCastleMovieId(securityKey: string, tmdbInfo: TMDBDetails): Promise<string> {
     const searchTerm = tmdbInfo.year ? `${tmdbInfo.title} ${tmdbInfo.year}` : tmdbInfo.title;
     
     return searchCastle(securityKey, searchTerm)
         .then(function(searchResult) {
             const data = extractDataBlock(searchResult);
-            const rows = data.rows || [];
+            const rows = (data.rows as SearchMovieItem[]) || [];
             
             if (rows.length === 0) {
                 throw new Error('No search results found');
@@ -340,12 +451,12 @@ function findCastleMovieId(securityKey: string, tmdbInfo: any): Promise<string> 
 }
 
 // Process video response and extract streams
-function processVideoResponse(videoData: any, mediaInfo: any, seasonNum: number | null, episodeNum: number | null, resolution: number, languageInfo: string | null): any[] {
-    const streams = [];
+function processVideoResponse(videoData: VideoResponse, mediaInfo: TMDBDetails, seasonNum: number | null, episodeNum: number | null, resolution: number, languageInfo: string | null): StreamResult[] {
+    const streams: StreamResult[] = [];
     const data = extractDataBlock(videoData);
     
     // Extract video URL
-    const videoUrl = data.videoUrl;
+    const videoUrl = data.videoUrl as string;
     if (!videoUrl) {
         console.log('[Castle] No videoUrl found in response');
         return streams;
@@ -370,7 +481,7 @@ function processVideoResponse(videoData: any, mediaInfo: any, seasonNum: number 
     
     // Check if there are multiple quality videos
     if (data.videos && Array.isArray(data.videos)) {
-        data.videos.forEach(function(video: any) {
+        data.videos.forEach(function(video: VideoItem) {
             // Clean up quality to remove SD/HD/FHD prefixes
             let videoQuality = video.resolutionDescription || video.resolution || quality;
             videoQuality = videoQuality.replace(/^(SD|HD|FHD)\s+/i, ''); // Remove SD/HD/FHD prefixes
@@ -420,7 +531,7 @@ function processVideoResponse(videoData: any, mediaInfo: any, seasonNum: number 
 }
 
 // Main function to extract streaming links
-async function getStreams(tmdbId: string, mediaType: string, seasonNum: number | null, episodeNum: number | null): Promise<any[]> {
+async function getStreams(tmdbId: string, mediaType: string, seasonNum: number | null, episodeNum: number | null): Promise<StreamResult[]> {
     console.log(`[Castle] Starting extraction for TMDB ID: ${tmdbId}, Type: ${mediaType}${mediaType === 'tv' ? `, S:${seasonNum}E:${episodeNum}` : ''}`);
     
     try {
@@ -441,10 +552,10 @@ async function getStreams(tmdbId: string, mediaType: string, seasonNum: number |
         // Step 5: Handle seasons/episodes for TV shows
         if (mediaType === 'tv' && seasonNum && episodeNum) {
             const data = extractDataBlock(details);
-            const seasons = data.seasons || [];
+            const seasons = (data.seasons as Season[]) || [];
             
             // Find the season
-            const season = seasons.find(function(s: any) {
+            const season = seasons.find(function(s: Season) {
                 return s.number === seasonNum;
             });
             
@@ -457,11 +568,11 @@ async function getStreams(tmdbId: string, mediaType: string, seasonNum: number |
         
         // Step 6: Find episode ID
         const data = extractDataBlock(details);
-        const episodes = data.episodes || [];
+        const episodes = (data.episodes as Episode[]) || [];
         
         let episodeId = null;
         if (mediaType === 'tv' && seasonNum && episodeNum) {
-            const episode = episodes.find(function(e: any) {
+            const episode = episodes.find(function(e: Episode) {
                 return e.number === episodeNum;
             });
             if (episode && episode.id) {
@@ -477,14 +588,14 @@ async function getStreams(tmdbId: string, mediaType: string, seasonNum: number |
         }
         
         // Step 7: Check for language-specific tracks
-        const episode = episodes.find(function(e: any) {
+        const episode = episodes.find(function(e: Episode) {
             return e.id.toString() === episodeId;
         });
-        const tracks = (episode && episode.tracks) || [];
+        const tracks = (episode && (episode.tracks as EpisodeTrack[])) || [];
         
         // Step 8: Get video URLs for ALL available languages
         const resolution = 2; // Default to 720p
-        const allStreams: any[] = [];
+        const allStreams: StreamResult[] = [];
         
         // Process all language tracks
         for (let i = 0; i < tracks.length; i++) {
@@ -512,8 +623,8 @@ async function getStreams(tmdbId: string, mediaType: string, seasonNum: number |
                     } else {
                         console.log(`[Castle] ⚠️  ${langName}: v1 returned no streams`);
                     }
-                } catch (error: any) {
-                    console.log(`[Castle] ⚠️  ${langName}: v1 failed - ${error.message}`);
+                } catch (error: unknown) {
+                    console.log(`[Castle] ⚠️  ${langName}: v1 failed - ${(error as Error).message || 'Unknown error'}`);
                 }
             } else {
                 // No individual video, skip this language
@@ -539,8 +650,8 @@ async function getStreams(tmdbId: string, mediaType: string, seasonNum: number |
         });
 
         return allStreams;
-    } catch (error: any) {
-        console.error(`[Castle] Error: ${error.message}`);
+    } catch (error: unknown) {
+        console.error(`[Castle] Error: ${(error as Error).message || 'Unknown error'}`);
         return []; // Return empty array on error
     }
 }
@@ -587,12 +698,12 @@ export async function GET(request: NextRequest) {
             count: streams.length
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Castle API] Error:', error);
         return NextResponse.json(
             { 
                 success: false,
-                error: error.message || 'Internal server error',
+                error: (error as Error).message || 'Internal server error',
                 provider: 'castle'
             },
             { status: 500 }

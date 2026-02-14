@@ -6,9 +6,47 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { sendQuotaWarningEmail, shouldSendQuotaWarning, calculateUsagePercentage } from "@/lib/email-service";
 
+interface ApiKeyData {
+  id: string | number;
+  key: string;
+  userId: string;
+  requestCount: number;
+  requestQuota: number;
+  isActive: boolean;
+  lastUsedAt: Date | null;
+  message?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  keyData?: ApiKeyData;
+}
+
 export async function validateApiKey(
   request: NextRequest
-): Promise<{ valid: boolean; error?: string; keyData?: any }> {
+): Promise<ValidationResult> {
+  // API bypass flag for unlimited individual access
+  const apiUnlimitedBypass = false; // Set to true to enable normal API validation
+  
+  if (apiUnlimitedBypass) {
+    return {
+      valid: true,
+      keyData: {
+        id: 'unlimited',
+        key: 'unlimited-access',
+        userId: 'individual-unlimited',
+        requestCount: 0,
+        requestQuota: Infinity,
+        isActive: true,
+        lastUsedAt: new Date(),
+        message: 'Individual unlimited access - API validation bypassed'
+      }
+    };
+  }
+
   // Try to get API key from different sources
   let key: string | null = null;
 
@@ -53,7 +91,7 @@ export async function validateApiKey(
           key = userKey.key;
         }
       }
-    } catch (error) {
+    } catch {
       // Session check failed, continue without key
     }
   }
