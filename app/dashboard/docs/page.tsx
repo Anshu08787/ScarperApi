@@ -41,6 +41,7 @@ import { MOD_ENDPOINTS } from "../../../components/docs-components/mod-docs"
 import { ZTEEN_ENDPOINTS } from "../../../components/docs-components/zteen-docs"
 import { XV_ENDPOINTS } from "../../../components/docs-components/xv-docs"
 import { FZ_ENDPOINTS } from "../../../components/docs-components/fz-docs"
+import { YOUTUBE_ENDPOINTS } from "../../../components/docs-components/youtube-docs"
 
 interface ApiEndpoint {
   name: string
@@ -1833,7 +1834,8 @@ console.log(episodeData);`,
   ...FZ_ENDPOINTS,
   ...EXTRACTORS_ENDPOINTS,
   ...UHDMOVIES_ENDPOINTS,
-  ...MOD_ENDPOINTS
+  ...MOD_ENDPOINTS,
+  ...YOUTUBE_ENDPOINTS
 ]
 
 export default function DocumentationPage() {
