@@ -5,75 +5,183 @@ interface StreamResponse {
   success: boolean;
   originalUrl?: string;
   convertedUrl?: string;
+  detailUrl?: string;
   apiUrl?: string;
   movieImage?: string;
-  data?: any;
+  playbackHeaders?: Record<string, string>;
+  data?: unknown;
   error?: string;
+}
+
+interface ParsedStreamInput {
+  slug: string;
+  id: string;
+  type: string;
+  urlSeason: string | null;
+  urlEpisode: string | null;
+  convertedUrl: URL;
+  detailUrl: string;
+  apiUrl: URL;
+}
+
+function buildConvertedUrl(slug: string, id: string, type: string, season?: string | null, episode?: string | null) {
+  const convertedUrl = new URL(`https://themoviebox.org/movies/${slug}`);
+  convertedUrl.searchParams.set('id', id);
+  convertedUrl.searchParams.set('type', type);
+
+  if (season) {
+    convertedUrl.searchParams.set('detailSe', season);
+    convertedUrl.searchParams.set('detailEp', episode || '1');
+  }
+
+  convertedUrl.searchParams.set('lang', 'en');
+  return convertedUrl;
+}
+
+function buildDetailUrl(slug: string, id: string, type: string, season?: string | null, episode?: string | null) {
+  const detailUrl = new URL(`https://themoviebox.org/moviesDetail/${slug}`);
+  detailUrl.searchParams.set('id', id);
+  detailUrl.searchParams.set('type', type);
+
+  if (season) {
+    detailUrl.searchParams.set('season', season);
+    detailUrl.searchParams.set('episode', episode || '1');
+  }
+
+  return detailUrl.toString();
+}
+
+function normalizeInputUrlFromOuterParams(inputUrl: string, outerSearchParams: URLSearchParams) {
+  const normalizedUrl = new URL(inputUrl);
+  const isDirectPlayUrl =
+    normalizedUrl.pathname === '/wefeed-h5api-bff/subject/play' ||
+    normalizedUrl.pathname.endsWith('/wefeed-h5api-bff/subject/play');
+
+  if (!isDirectPlayUrl) {
+    return inputUrl;
+  }
+
+  const outerSubjectId = outerSearchParams.get('subjectId');
+  const outerSeason = outerSearchParams.get('se');
+  const outerEpisode = outerSearchParams.get('ep');
+  const outerDetailPath = outerSearchParams.get('detailPath');
+
+  if (!normalizedUrl.searchParams.get('subjectId') && outerSubjectId) {
+    normalizedUrl.searchParams.set('subjectId', outerSubjectId);
+  }
+  if (!normalizedUrl.searchParams.get('se') && outerSeason) {
+    normalizedUrl.searchParams.set('se', outerSeason);
+  }
+  if (!normalizedUrl.searchParams.get('ep') && outerEpisode) {
+    normalizedUrl.searchParams.set('ep', outerEpisode);
+  }
+  if (!normalizedUrl.searchParams.get('detailPath') && outerDetailPath) {
+    normalizedUrl.searchParams.set('detailPath', outerDetailPath);
+  }
+
+  return normalizedUrl.toString();
+}
+
+function parseInputUrl(inputUrl: string, customSeason?: string | null, customEpisode?: string | null): ParsedStreamInput {
+  const url = new URL(inputUrl);
+  const pathParts = url.pathname.split('/');
+
+  if (pathParts[1] === 'moviesDetail') {
+    const slug = pathParts[2];
+    const id = url.searchParams.get('id');
+    const urlSeason = url.searchParams.get('season');
+    const urlEpisode = url.searchParams.get('episode');
+    const type = url.searchParams.get('type') || '/movie/detail';
+
+    if (!slug || !id) {
+      throw new Error('ID parameter is required in the URL');
+    }
+
+    const finalSeason = customSeason || urlSeason;
+    const finalEpisode = customEpisode || urlEpisode || '1';
+    const convertedUrl = buildConvertedUrl(slug, id, type, finalSeason, finalEpisode);
+    const apiUrl = new URL('https://themoviebox.org/wefeed-h5api-bff/subject/play');
+    apiUrl.searchParams.set('subjectId', id);
+    apiUrl.searchParams.set('se', finalSeason || '0');
+    apiUrl.searchParams.set('ep', finalSeason ? finalEpisode : '0');
+    apiUrl.searchParams.set('detailPath', slug);
+
+    return {
+      slug,
+      id,
+      type,
+      urlSeason,
+      urlEpisode,
+      convertedUrl,
+      detailUrl: buildDetailUrl(slug, id, type, finalSeason, finalEpisode),
+      apiUrl,
+    };
+  }
+
+  if (pathParts[1] === 'wefeed-h5api-bff' && pathParts[2] === 'subject' && pathParts[3] === 'play') {
+    const slug = url.searchParams.get('detailPath');
+    const id = url.searchParams.get('subjectId');
+    const urlSeason = url.searchParams.get('se');
+    const urlEpisode = url.searchParams.get('ep');
+    const type = '/movie/detail';
+
+    if (!slug || !id) {
+      throw new Error('subjectId and detailPath are required in the API URL');
+    }
+
+    const finalSeason = customSeason || urlSeason;
+    const finalEpisode = customEpisode || urlEpisode || '1';
+    const convertedUrl = buildConvertedUrl(slug, id, type, finalSeason, finalEpisode);
+    const apiUrl = new URL('https://themoviebox.org/wefeed-h5api-bff/subject/play');
+    apiUrl.searchParams.set('subjectId', id);
+    apiUrl.searchParams.set('se', finalSeason || '0');
+    apiUrl.searchParams.set('ep', finalEpisode || '0');
+    apiUrl.searchParams.set('detailPath', slug);
+
+    return {
+      slug,
+      id,
+      type,
+      urlSeason,
+      urlEpisode,
+      convertedUrl,
+      detailUrl: buildDetailUrl(slug, id, type, finalSeason, finalEpisode),
+      apiUrl,
+    };
+  }
+
+  throw new Error('Invalid URL format. Expected /moviesDetail/ or /wefeed-h5api-bff/subject/play path');
 }
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const inputUrl = searchParams.get("url");
+    const rawInputUrl = searchParams.get("url");
     const customSeason = searchParams.get("season"); // Allow season override via query param
     const customEpisode = searchParams.get("episode"); // Allow episode override via query param
 
-    if (!inputUrl) {
+    if (!rawInputUrl) {
       return NextResponse.json({
         success: false,
         error: "URL parameter is required"
       } as StreamResponse, { status: 400 });
     }
 
-    const url = new URL(inputUrl);
-    const pathParts = url.pathname.split('/');
-    
-    if (pathParts[1] !== 'moviesDetail') {
+    const inputUrl = normalizeInputUrlFromOuterParams(rawInputUrl, searchParams);
+
+    let parsedInput: ParsedStreamInput;
+    try {
+      parsedInput = parseInputUrl(inputUrl, customSeason, customEpisode);
+    } catch (parseError) {
       return NextResponse.json({
         success: false,
-        error: "Invalid URL format. Expected /moviesDetail/ path"
+        error: parseError instanceof Error ? parseError.message : 'Invalid URL parameter'
       } as StreamResponse, { status: 400 });
     }
 
-    const slug = pathParts[2]; // e.g., "loki-hindi-GF8hK7K8c4a"
-    const id = url.searchParams.get('id');
-    const urlSeason = url.searchParams.get('season'); // Season from the input URL
-    const urlEpisode = url.searchParams.get('episode'); // Episode from the input URL
-    const type = url.searchParams.get('type') || '/movie/detail';
-
-    if (!id) {
-      return NextResponse.json({
-        success: false,
-        error: "ID parameter is required in the URL"
-      } as StreamResponse, { status: 400 });
-    }
-
+    const { convertedUrl, apiUrl, detailUrl, urlSeason, urlEpisode } = parsedInput;
     const finalSeason = customSeason || urlSeason;
-    const finalEpisode = customEpisode || urlEpisode || '1';
-
-    const convertedUrl = new URL(`https://themoviebox.org/movies/${slug}`);
-    convertedUrl.searchParams.set('id', id);
-    convertedUrl.searchParams.set('type', type);
-    
-    if (finalSeason) {
-      convertedUrl.searchParams.set('detailSe', finalSeason);
-      convertedUrl.searchParams.set('detailEp', finalEpisode);
-    }
-    
-    convertedUrl.searchParams.set('lang', 'en');
-
-    const apiUrl = new URL('https://themoviebox.org/wefeed-h5api-bff/subject/play');
-    apiUrl.searchParams.set('subjectId', id);
-    
-    if (finalSeason) {
-      apiUrl.searchParams.set('se', finalSeason);
-      apiUrl.searchParams.set('ep', finalEpisode);
-    } else {
-      apiUrl.searchParams.set('se', '0');
-      apiUrl.searchParams.set('ep', '0');
-    }
-    
-    apiUrl.searchParams.set('detailPath', slug);
+    const finalEpisode = customEpisode || urlEpisode || (finalSeason ? '1' : '0');
 
     const response = await fetch(apiUrl.toString(), {
       method: 'GET',
@@ -99,17 +207,25 @@ export async function GET(request: NextRequest) {
         success: false,
         originalUrl: inputUrl,
         convertedUrl: convertedUrl.toString(),
+        detailUrl,
         apiUrl: apiUrl.toString(),
         error: `API request failed with status: ${response.status}`
       } as StreamResponse, { status: response.status });
     }
 
     const data = await response.json();
+    const playbackHeaders = {
+      Referer: convertedUrl.toString(),
+    };
+    const enrichedData =
+      data && typeof data === 'object'
+        ? { ...(data as Record<string, unknown>), playbackHeaders }
+        : data;
 
     // Optionally fetch movie image from the detail page
     let movieImage = '';
     try {
-      const detailResponse = await fetch(inputUrl, {
+      const detailResponse = await fetch(detailUrl, {
         method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36',
@@ -135,15 +251,17 @@ export async function GET(request: NextRequest) {
       success: true,
       originalUrl: inputUrl,
       convertedUrl: convertedUrl.toString(),
+      detailUrl,
       apiUrl: apiUrl.toString(),
       movieImage,
+      playbackHeaders,
       extractedParams: {
         urlSeason,
         urlEpisode,
         finalSeason,
         finalEpisode
       },
-      data
+      data: enrichedData
     } as StreamResponse);
 
   } catch (error) {
@@ -167,54 +285,17 @@ export async function POST(request: NextRequest) {
       } as StreamResponse, { status: 400 });
     }
 
-    const url = new URL(inputUrl);
-    const pathParts = url.pathname.split('/');
-    
-    if (pathParts[1] !== 'moviesDetail') {
+    let parsedInput: ParsedStreamInput;
+    try {
+      parsedInput = parseInputUrl(inputUrl, customSeason, customEpisode);
+    } catch (parseError) {
       return NextResponse.json({
         success: false,
-        error: "Invalid URL format. Expected /moviesDetail/ path"
+        error: parseError instanceof Error ? parseError.message : 'Invalid URL parameter'
       } as StreamResponse, { status: 400 });
     }
 
-    const slug = pathParts[2];
-    const id = url.searchParams.get('id');
-    const originalSeason = url.searchParams.get('season');
-    const type = url.searchParams.get('type') || '/movie/detail';
-
-    if (!id) {
-      return NextResponse.json({
-        success: false,
-        error: "ID parameter is required in the URL"
-      } as StreamResponse, { status: 400 });
-    }
-
-    const finalSeason = customSeason || originalSeason;
-    const finalEpisode = customEpisode || '1';
-
-    const convertedUrl = new URL(`https://themoviebox.org/movies/${slug}`);
-    convertedUrl.searchParams.set('id', id);
-    convertedUrl.searchParams.set('type', type);
-    
-    if (finalSeason) {
-      convertedUrl.searchParams.set('detailSe', finalSeason);
-      convertedUrl.searchParams.set('detailEp', finalEpisode);
-    }
-    
-    convertedUrl.searchParams.set('lang', 'en');
-
-    const apiUrl = new URL('https://themoviebox.org/wefeed-h5api-bff/subject/play');
-    apiUrl.searchParams.set('subjectId', id);
-    
-    if (finalSeason) {
-      apiUrl.searchParams.set('se', finalSeason);
-      apiUrl.searchParams.set('ep', finalEpisode);
-    } else {
-      apiUrl.searchParams.set('se', '0');
-      apiUrl.searchParams.set('ep', '0');
-    }
-    
-    apiUrl.searchParams.set('detailPath', slug);
+    const { convertedUrl, apiUrl, detailUrl } = parsedInput;
 
     const response = await fetch(apiUrl.toString(), {
       method: 'GET',
@@ -240,17 +321,25 @@ export async function POST(request: NextRequest) {
         success: false,
         originalUrl: inputUrl,
         convertedUrl: convertedUrl.toString(),
+        detailUrl,
         apiUrl: apiUrl.toString(),
         error: `API request failed with status: ${response.status}`
       } as StreamResponse, { status: response.status });
     }
 
     const data = await response.json();
+    const playbackHeaders = {
+      Referer: convertedUrl.toString(),
+    };
+    const enrichedData =
+      data && typeof data === 'object'
+        ? { ...(data as Record<string, unknown>), playbackHeaders }
+        : data;
 
     // Optionally fetch movie image from the detail page
     let movieImage = '';
     try {
-      const detailResponse = await fetch(inputUrl, {
+      const detailResponse = await fetch(detailUrl, {
         method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36',
@@ -276,13 +365,15 @@ export async function POST(request: NextRequest) {
       success: true,
       originalUrl: inputUrl,
       convertedUrl: convertedUrl.toString(),
+      detailUrl,
       apiUrl: apiUrl.toString(),
       movieImage,
+      playbackHeaders,
       customParams: {
         season: customSeason,
         episode: customEpisode
       },
-      data
+      data: enrichedData
     } as StreamResponse);
 
   } catch (error) {
