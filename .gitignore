@@ -12,6 +12,9 @@ app/api/tera
 # TheMovie all route
 app/api/themovie/all
 
+# NX API routes
+app/api/nx
+
 # Eporner API routes
 app/api/adult/eporner
 

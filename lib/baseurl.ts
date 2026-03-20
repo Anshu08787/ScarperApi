@@ -26,7 +26,7 @@ async function fetchProviders(): Promise<ProvidersData> {
 
   try {
     const response = await fetch(
-      "https://anshu78780.github.io/json/providers.json"
+      "https://raw.githubusercontent.com/Anshu78780/json/main/providers.json"
     );
 
     if (!response.ok) {
@@ -134,7 +134,7 @@ export async function getCookies(): Promise<string> {
   }
 
   try {
-    const response = await fetch('https://anshu78780.github.io/json/cookies.json', {
+    const response = await fetch('https://raw.githubusercontent.com/Anshu78780/json/main/cookies.json', {
       cache: 'no-cache',
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; ScraperAPI/1.0)',
