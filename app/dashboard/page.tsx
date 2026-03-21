@@ -176,7 +176,6 @@ export default function DashboardPage() {
   const [linuxDialogOpen, setLinuxDialogOpen] = useState(false);
   const [selectedLinuxAsset, setSelectedLinuxAsset] = useState<{ name: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
 
   const router = useRouter();
 
@@ -249,20 +248,6 @@ export default function DashboardPage() {
       return () => clearTimeout(timer);
     }
   }, [showAuthDialog, router]);
-
-  useEffect(() => {
-    // Check if user has already celebrated
-    const hasCelebrated = sessionStorage.getItem('screenscape-celebrated');
-    if (!hasCelebrated) {
-      setShowCelebration(true);
-    }
-  }, []);
-
-  const handleCelebrate = () => {
-    sessionStorage.setItem('screenscape-celebrated', 'true');
-    setShowCelebration(false);
-    toast.success('🎉 Thank you for celebrating with us!');
-  };
 
   const fetchStats = async () => {
     try {
@@ -368,113 +353,6 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* One Year Celebration Dialog */}
-      <Dialog open={showCelebration} onOpenChange={setShowCelebration}>
-        <DialogContent className="sm:max-w-2xl border-2 border-zinc-200 bg-white dark:bg-zinc-900">
-          <DialogHeader>
-            <DialogTitle className="text-center text-2xl">
-              <div className="flex items-center justify-center gap-3">
-                <motion.span
-                  animate={{ rotate: [0, 10, -10, 10, 0] }}
-                  transition={{ 
-                    duration: 0.5,
-                    repeat: Infinity,
-                    repeatDelay: 1
-                  }}
-                  className="text-3xl"
-                >
-                  🎉
-                </motion.span>
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                  Thank You for Being Here!
-                </span>
-                <motion.span className="text-2xl">❤️</motion.span>
-              </div>
-            </DialogTitle>
-            <DialogDescription className="text-center text-base pt-2">
-              We appreciate your support and trust in ScreenScape.
-              <br />
-              <span className="text-zinc-700 dark:text-zinc-300">Your presence means everything to us!</span>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
-            {/* Main Milestone */}
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-2xl">⭐</span>
-                <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">1 Year Journey:</span>
-              </div>
-              <p className="text-zinc-700 dark:text-zinc-300">Together we&apos;ve achieved incredible milestones!</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                <span className="text-2xl">✨</span>
-                <div className="flex-1">
-                  <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">7,000+</span>
-                  <span className="text-zinc-700 dark:text-zinc-300 ml-2">downloads</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                <span className="text-2xl">👥</span>
-                <div className="flex-1">
-                  <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">1,500+</span>
-                  <span className="text-zinc-700 dark:text-zinc-300 ml-2">active users</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                <span className="text-2xl">🎬</span>
-                <div className="flex-1">
-                  <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">27,843+</span>
-                  <span className="text-zinc-700 dark:text-zinc-300 ml-2">movies/series watched</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-col gap-2">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full"
-            >
-              <Button 
-                onClick={handleCelebrate}
-                className="w-full bg-zinc-900 text-white font-semibold shadow-lg text-base py-6 dark:bg-zinc-800"
-              >
-                <motion.span
-                  animate={{ rotate: [0, 10, -10, 10, 0] }}
-                  transition={{ 
-                    duration: 0.5,
-                    repeat: Infinity,
-                    repeatDelay: 2
-                  }}
-                  className="mr-2"
-                >
-                  🎉
-                </motion.span>
-                Celebrate with Us!
-                <motion.span
-                  animate={{ rotate: [0, -10, 10, -10, 0] }}
-                  transition={{ 
-                    duration: 0.5,
-                    repeat: Infinity,
-                    repeatDelay: 2
-                  }}
-                  className="ml-2"
-                >
-                  🎊
-                </motion.span>
-              </Button>
-            </motion.div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Download Section */}
       <div className="space-y-6 mt-8">
         <ParallaxSection speed={0.2}>
@@ -483,10 +361,43 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <h2 className="text-2xl font-bold tracking-tight">ScreenScape Downloads</h2>
-            <p className="text-muted-foreground">
-              Download ScreenScape for Android, Android TV, and Linux
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">ScreenScape Downloads</h2>
+                <p className="text-muted-foreground">
+                  Download ScreenScape for Android, Android TV, and Linux
+                </p>
+              </div>
+              <Button asChild variant="default" size="lg" className="gap-2">
+                <a 
+                  href="https://screenscape.me"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Watch Online
+                </a>
+              </Button>
+            </div>
           </motion.div>
         </ParallaxSection>
 

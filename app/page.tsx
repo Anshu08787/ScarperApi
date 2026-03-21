@@ -48,12 +48,6 @@ export default async function Home() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-zinc-950 font-sans overflow-hidden">
-      {/* Celebrating 1st Year Badge */}
-      <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
-        <span className="px-4 py-2 rounded-full bg-zinc-100 text-zinc-900 border border-zinc-200 shadow-lg dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700 font-semibold text-sm flex items-center gap-2">
-          🎉 Celebrating 1st Year
-        </span>
-      </div>
       {/* Logo and GitHub Stars */}
       <div className="fixed top-6 left-6 z-50 flex items-center gap-4">
         <Image
@@ -96,6 +90,30 @@ export default async function Home() {
       
       {/* Login/Signup Buttons */}
       <div className="fixed top-6 right-6 z-50 flex gap-3">
+        <Link href="https://screenscape.me" target="_blank" rel="noopener noreferrer">
+          <Button variant="secondary" size="default" className="gap-2">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Watch Online
+          </Button>
+        </Link>
         <Link href="/login">
           <Button variant="outline" size="default">
             Login
