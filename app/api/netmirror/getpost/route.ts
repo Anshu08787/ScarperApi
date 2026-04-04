@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBaseUrl, getCookies } from '@/lib/baseurl';
-import { validateProviderAccess, createProviderErrorResponse } from '@/lib/provider-validator';
 
 interface NetMirrorPostResponse {
     success: boolean;
@@ -67,10 +66,7 @@ async function fetchNetMirrorPost(id: string, timestamp: string): Promise<Record
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorPostResponse>> {
-    const validation = await validateProviderAccess(request, "NetMirror");
-    if (!validation.valid) {
-        return createProviderErrorResponse(validation.error || "Unauthorized") as NextResponse<NetMirrorPostResponse>;
-    }
+    
 
     try {
         const { searchParams } = new URL(request.url);
