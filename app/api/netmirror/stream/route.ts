@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCookies } from '@/lib/baseurl';
-import { validateProviderAccess, createProviderErrorResponse } from '@/lib/provider-validator';
 
 interface NetMirrorStreamResponse {
     success: boolean;
@@ -164,10 +163,7 @@ async function getPlaylist(id: string, timestamp: string, h: string): Promise<an
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<NetMirrorStreamResponse>> {
-    const validation = await validateProviderAccess(request, "NetMirror");
-    if (!validation.valid) {
-        return createProviderErrorResponse(validation.error || "Unauthorized") as NextResponse<NetMirrorStreamResponse>;
-    }
+   
 
     try {
         const { searchParams } = new URL(request.url);
